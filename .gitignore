@@ -4,3 +4,5 @@ node_modules/
 .next/
 .expo/
 dist/
+*.tsbuildinfo
+apps/backend/src/generated/
