@@ -1,4 +1,7 @@
-import { pgTable, pgEnum, uuid, text, timestamp, index, jsonb , doublePrecision} from 'drizzle-orm/pg-core';
+import {
+  pgTable, pgEnum, uuid, text, timestamp, index, jsonb, doublePrecision,
+  boolean, integer, numeric,
+} from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['customer', 'seller', 'admin']);
 export const userStatusEnum = pgEnum('user_status', ['active', 'suspended', 'banned']);
@@ -52,6 +55,46 @@ export const adminAuditLogs = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('audit_target_idx').on(t.targetType, t.targetId)],
+);
+export const productStatusEnum = pgEnum('product_status', ['active', 'hidden']);
+
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  isActive: boolean('is_active').notNull().default(true),
+});
+
+export const products = pgTable(
+  'products',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sellerId: uuid('seller_id').notNull().references(() => sellerProfiles.id),
+    categoryId: uuid('category_id').references(() => categories.id),
+    title: text('title').notNull(),
+    description: text('description'),
+    price: numeric('price', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').notNull().default('PKR'),
+    status: productStatusEnum('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('products_status_category_idx').on(t.status, t.categoryId),
+    index('products_seller_status_idx').on(t.sellerId, t.status),
+  ],
+);
+
+export const productImages = pgTable(
+  'product_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => [index('product_images_product_idx').on(t.productId)],
 );
 
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected']);
